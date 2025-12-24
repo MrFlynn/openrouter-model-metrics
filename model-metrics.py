@@ -96,7 +96,10 @@ async def wait_until_scroll_stabilizes(
 
 
 async def main() -> None:
-    crawler = PlaywrightCrawler(respect_robots_txt_file=True)
+    crawler = PlaywrightCrawler(
+        respect_robots_txt_file=True,
+        browser_launch_options={"chromium_sandbox": False},
+    )
 
     @crawler.router.handler(label="model")
     async def model_page_handler(context: PlaywrightCrawlingContext) -> None:
