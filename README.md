@@ -12,7 +12,7 @@ specific repository, the following command can be used to load all checkpoints
 into a SQLite database for more robust analysis.
 
 ```bash
-uvx --from git-history>=0.7 git-history file \
+uvx --with git-history>=0.7 git-history file \
   model-metrics.db model-metrics.json \
   --id model --id provider --ignore-duplicate-ids \
   --import re --convert "$(cat git-history-convert.py)"
