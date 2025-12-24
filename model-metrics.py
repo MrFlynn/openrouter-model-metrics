@@ -2,6 +2,9 @@
 # /// script
 # dependencies = ["crawlee[playwright]"]
 # ///
+#
+# A script used to crawl all active models on OpenRouter and collect performance
+# metrics for every provider for each model.
 
 import asyncio
 import re

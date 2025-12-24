@@ -1,2 +1,5 @@
 # Crawlee backend
 storage/
+
+# SQLite
+*.db
