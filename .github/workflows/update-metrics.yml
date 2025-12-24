@@ -1,0 +1,45 @@
+name: Update Model Metrics
+
+on:
+  push:
+  schedule:
+    - cron: '16 * * * *'
+
+jobs:
+  update-metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Cache playwright assets
+        uses: actions/cache@v5
+        id: cache-playwright
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}
+          restore-keys: |
+            playwright-${{ runner.os }}
+
+      - name: Install chromium via Playwright
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      
+      - name: Run model metrics
+        run: uv run model-metrics.py
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "actions@user.noreply.github.com"
+          git config --local user.name "Archive"
+          
+          git add model-metrics.json
+          git commit -m "Metrics from $(date -u)" || exit 0
+          git push
