@@ -6,7 +6,10 @@
 import asyncio
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
+from datetime import timedelta
 
+from crawlee import ConcurrencySettings
+from crawlee.browsers import BrowserPool
 from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
 from playwright.async_api import Locator, Page
 
@@ -98,7 +101,21 @@ async def wait_until_scroll_stabilizes(
 async def main() -> None:
     crawler = PlaywrightCrawler(
         respect_robots_txt_file=True,
-        browser_launch_options={"chromium_sandbox": False},
+        # Performance tuning
+        # - Keep browsers alive longer
+        # - Increase time until inactive browsers are terminated
+        # - Increase number of pages a browser can load
+        # - Raise early parallelism
+        browser_pool=BrowserPool.with_default_plugin(
+            browser_inactive_threshold=timedelta(seconds=60),
+            close_inactive_browsers_interval=timedelta(seconds=120),
+            retire_browser_after_page_count=500,
+            # Disable sandboxing due to breakage on Ubuntu.
+            browser_launch_options={"chromium_sandbox": False},
+        ),
+        concurrency_settings=ConcurrencySettings(
+            min_concurrency=2, max_concurrency=6, desired_concurrency=6
+        ),
     )
 
     @crawler.router.handler(label="model")
