@@ -33,6 +33,7 @@ jobs:
           python-version: "3.14"
 
       - name: Run model metrics
+        timeout-minutes: 30
         run: uv run model-metrics.py
 
       - name: Commit and push changes
