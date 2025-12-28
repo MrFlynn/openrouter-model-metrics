@@ -104,6 +104,11 @@ async def wait_until_scroll_stabilizes(
 async def main() -> None:
     crawler = PlaywrightCrawler(
         respect_robots_txt_file=True,
+        # Increase max_request_retries to handle transient navigation failures.
+        max_request_retries=3,
+        # Timeout for request handlers to prevent infinite hangs. If a request
+        # handler takes longer than this, it will be retried or marked as failed.
+        request_handler_timeout=timedelta(minutes=2),
         # Performance tuning
         # - Keep browsers alive longer
         # - Increase time until inactive browsers are terminated
@@ -120,6 +125,13 @@ async def main() -> None:
             min_concurrency=2, max_concurrency=6, desired_concurrency=6
         ),
     )
+
+    @crawler.failed_request_handler
+    async def on_failed_request(context: PlaywrightCrawlingContext, error: Exception) -> None:
+        context.log.error(
+            f"Request failed after {context.request.retry_count} retries: "
+            f"{context.request.url} - {error!r}"
+        )
 
     @crawler.router.handler(label="model")
     async def model_page_handler(context: PlaywrightCrawlingContext) -> None:
