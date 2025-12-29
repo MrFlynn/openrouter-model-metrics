@@ -40,6 +40,8 @@ jobs:
       - name: Run model metrics
         timeout-minutes: 30
         run: uv run model-metrics.py
+        env:
+          CRAWLEE_LOG_LEVEL: DEBUG
 
       - name: Commit and push changes
         run: |
