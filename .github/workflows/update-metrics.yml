@@ -40,8 +40,6 @@ jobs:
       - name: Run model metrics
         timeout-minutes: 30
         run: uv run model-metrics.py
-        env:
-          CRAWLEE_LOG_LEVEL: DEBUG
 
       - name: Print request queue if crawl failed
         if: ${{ failure() }}
