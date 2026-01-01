@@ -43,7 +43,12 @@ jobs:
         env:
           CRAWLEE_LOG_LEVEL: DEBUG
 
+      - name: Print request queue if crawl failed
+        if: ${{ failure() }}
+        run: jq '.' storage/requests_queues/**/*.json
+
       - name: Commit and push changes
+        if: ${{ !cancelled() }}
         run: |
           git config --local user.email "actions@user.noreply.github.com"
           git config --local user.name "Archive"
