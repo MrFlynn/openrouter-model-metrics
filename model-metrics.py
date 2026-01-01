@@ -13,7 +13,11 @@ from datetime import timedelta
 
 from crawlee import ConcurrencySettings
 from crawlee.browsers import BrowserPool
-from crawlee.crawlers import PlaywrightCrawler, PlaywrightCrawlingContext
+from crawlee.crawlers import (
+    BasicCrawlingContext,
+    PlaywrightCrawler,
+    PlaywrightCrawlingContext,
+)
 from playwright.async_api import Locator, Page
 
 
@@ -127,7 +131,9 @@ async def main() -> None:
     )
 
     @crawler.failed_request_handler
-    async def on_failed_request(context: PlaywrightCrawlingContext, error: Exception) -> None:
+    async def on_failed_request(
+        context: BasicCrawlingContext, error: Exception
+    ) -> None:
         context.log.error(
             f"Request failed after {context.request.retry_count} retries: "
             f"{context.request.url} - {error!r}"
