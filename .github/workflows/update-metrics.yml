@@ -16,9 +16,9 @@ jobs:
         with:
           ref: ${{ github.ref }}
 
-      - uses: actions/setup-node@v6
+      - uses: astral-sh/setup-uv@v7
         with:
-          node-version: "24"
+          python-version: "3.14"
 
       - name: Cache playwright assets
         uses: actions/cache@v5
@@ -31,11 +31,7 @@ jobs:
 
       - name: Install chromium via Playwright
         if: steps.cache-playwright.outputs.cache-hit != 'true'
-        run: npx playwright install chromium
-
-      - uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.14"
+        run: uvx playwright install chromium
 
       - name: Run model metrics
         timeout-minutes: 30
