@@ -39,7 +39,7 @@ jobs:
 
       - name: Print request queue if crawl failed
         if: ${{ failure() }}
-        run: jq '.' storage/requests_queues/**/*.json
+        run: jq '.' storage/request_queues/**/*.json
 
       - name: Commit and push changes
         if: ${{ !cancelled() }}
