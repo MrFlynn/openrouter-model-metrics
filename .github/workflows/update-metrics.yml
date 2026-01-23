@@ -36,10 +36,8 @@ jobs:
       - name: Run model metrics
         timeout-minutes: 30
         run: uv run model-metrics.py
-
-      - name: Print request queue if crawl failed
-        if: ${{ failure() }}
-        run: jq '.' storage/request_queues/**/*.json
+        env:
+          SCRAPE_METRICS_TIMEOUT: 20m
 
       - name: Commit and push changes
         if: ${{ !cancelled() }}
