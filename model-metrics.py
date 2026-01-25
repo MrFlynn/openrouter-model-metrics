@@ -207,7 +207,7 @@ async def main() -> None:
         while current_position <= total_height:
             # Enqueue links for models that have seen non-zero activity in the past week.
             await context.enqueue_links(
-                selector="ul li:not(:has(div[title='Tokens this week']:empty)) a:not(:is(span a))",
+                selector="ul li.group:not(:has(div[title='Tokens this week']:empty)) a:has(span)",
                 label="model",
             )
 
