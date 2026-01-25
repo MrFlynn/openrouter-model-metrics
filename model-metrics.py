@@ -227,15 +227,19 @@ async def main() -> None:
 
         context.log.info("Finished enqueueing model page links")
 
-    try:
-        await asyncio.wait_for(
-            crawler.run(["https://openrouter.ai/models"]),
-            timeout=parse_duration(os.getenv("SCRAPE_METRICS_TIMEOUT", "15m")),
-        )
-    except asyncio.TimeoutError:
-        crawler.log.warning("Crawler took too long", exc_info=True)
+    async def cancel_crawl() -> None:
+        await asyncio.sleep(parse_duration(os.getenv("SCRAPE_METRICS_TIMEOUT", "15m")))
+        crawler.stop()
 
-    await crawler.export_data("model-metrics.json")
+    canceller = asyncio.create_task(cancel_crawl())
+
+    try:
+        await crawler.run(["https://openrouter.ai/models"])
+    except Exception:
+        crawler.log.warning("Crawler was terminated early", exc_info=True)
+    finally:
+        canceller.cancel()
+        await crawler.export_data("model-metrics.json")
 
 
 if __name__ == "__main__":
