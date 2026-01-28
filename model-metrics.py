@@ -229,7 +229,10 @@ async def main() -> None:
 
     async def cancel_crawl() -> None:
         await asyncio.sleep(parse_duration(os.getenv("SCRAPE_METRICS_TIMEOUT", "15m")))
-        crawler.stop()
+
+        # Hard abort collector. Stopping doesn't get us out of the situation where
+        # request queue is stuck in an invalid state.
+        await crawler._autoscaled_pool.abort()
 
     canceller = asyncio.create_task(cancel_crawl())
 
