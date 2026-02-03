@@ -19,6 +19,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.14"
+          enable-cache: false
 
       - name: Install chromium via Playwright
         run: uvx playwright install chromium
