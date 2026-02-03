@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = ["crawlee[playwright]"]
+# dependencies = ["crawlee[playwright]==1.2.1"]
 # ///
 #
 # A script used to crawl all active models on OpenRouter and collect performance
