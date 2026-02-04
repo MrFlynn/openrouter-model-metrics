@@ -1,0 +1,10 @@
+[project]
+name = "openrouter-model-metrics"
+description = "Collect AI model performance metrics from openrouter.ai"
+version = "0.0.1"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "browserforge==1.2.3",
+    "crawlee[playwright]==1.2.1",
+]
