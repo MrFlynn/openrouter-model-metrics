@@ -5,6 +5,5 @@ version = "0.0.1"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "browserforge==1.2.3",
-    "crawlee[playwright]==1.2.1",
+    "crawlee[playwright]==1.6.3",
 ]
