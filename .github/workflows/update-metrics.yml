@@ -21,7 +21,7 @@ jobs:
           python-version: "3.14"
 
       - name: Install chromium via Playwright
-        run: uvx playwright install chromium
+        run: uv run playwright install chromium
 
       - name: Run model metrics
         timeout-minutes: 30
