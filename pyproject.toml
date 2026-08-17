@@ -1,9 +1,15 @@
 [project]
 name = "openrouter-model-metrics"
 description = "Collect AI model performance metrics from openrouter.ai"
-version = "0.0.1"
+version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "crawlee[playwright]==1.6.3",
+    "loguru>=0.7.3",
+    "requests>=2.33.1",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
 ]
