@@ -50,19 +50,20 @@ def send_request[T](
 def get_models(token: str, modality: Modality = Modality.ALL) -> Iterator[Model]:
     session = requests.Session()
 
+    prefix = "https://openrouter.ai"
     next_url: str | None = (
-        f"https://openrouter.ai/api/v1/models?output_modalities={modality}&limit=5"
+        f"/api/v1/models?output_modalities={modality}"
     )
+
     while next_url:
         if data := send_request(
             requests.Request(
-                "GET", next_url, headers={"Authorization": f"Bearer {token}"}
+                "GET", prefix + next_url, headers={"Authorization": f"Bearer {token}"}
             ),
             session,
             _hint=GenericAPIResponse[list[Model]],
         ):
             yield from data.get("data", [])
-
             next_url = data.get("links", {}).get("next")
 
 
