@@ -13,8 +13,8 @@ import requests
 from loguru import logger
 
 
-class ModelResponse(TypedDict):
-    data: Required[list[Model]]
+class GenericAPIResponse[T](TypedDict):
+    data: Required[T]
     links: Required[Links]
 
 
@@ -34,33 +34,46 @@ class Modality(StrEnum):
     ALL = auto()
 
 
-def get_models(token: str, modality: Modality = Modality.ALL) -> Iterator[Model]:
-    next_url: str | None = (
-        f"https://openrouter.ai/api/v1/models?output_modalities={modality}"
-    )
-
-    while next_url:
+def send_request[T](
+    request: requests.Request, session: requests.Session | None, *, _hint: type[T]
+) -> T | None:
+    with logger.contextualize(
+        method=request.method, url=request.url, model=request.params.get("permaslug")
+    ):
         try:
-            response = requests.get(
-                next_url, headers={"Authorization": f"Bearer {token}"}
-            )
+            if not session:
+                session = requests.Session()
+
+            response = session.send(request.prepare())
             if not response.ok:
-                logger.error(
-                    "Model list query returned non-ok status code",
-                    url=next_url,
-                    status_code=response.status_code,
+                logger.bind(status_code=response.status_code).error(
+                    "Query returned non-ok status code"
                 )
 
-                break
+            return cast(T, json.loads(response.content))
+        except json.JSONDecodeError:
+            logger.exception("Openrouter return malformed JSON")
+        except requests.ConnectionError, requests.ConnectTimeout:
+            logger.exception("Failed to open connection to Openrouter API")
 
-            data = cast(ModelResponse, json.loads(response.content))
+
+def get_models(token: str, modality: Modality = Modality.ALL) -> Iterator[Model]:
+    session = requests.Session()
+
+    next_url: str | None = (
+        f"https://openrouter.ai/api/v1/models?output_modalities={modality}&limit=5"
+    )
+    while next_url:
+        if data := send_request(
+            requests.Request(
+                "GET", next_url, headers={"Authorization": f"Bearer {token}"}
+            ),
+            session,
+            _hint=GenericAPIResponse[list[Model]],
+        ):
             yield from data.get("data", [])
 
             next_url = data.get("links", {}).get("next")
-        except json.JSONDecodeError:
-            logger.exception("Openrouter sent malformed JSON response")
-        except requests.ConnectionError, requests.ConnectTimeout:
-            logger.exception("Could not connect to Openrouter API")
 
 
 class ModelProviderInfo(TypedDict):
@@ -70,27 +83,16 @@ class ModelProviderInfo(TypedDict):
 
 @functools.cache
 def get_provider_ids(slug: str) -> list[ModelProviderInfo]:
-    try:
-        response = requests.get(
+    if data := send_request(
+        requests.Request(
+            "GET",
             "https://openrouter.ai/api/frontend/v1/stats/endpoint",
             params={"permaslug": slug},
-        )
-
-        if not response.ok:
-            logger.error(
-                "Model to provider ID query returned non-200 status code",
-                url=response.request.url,
-                status_code=response.status_code,
-            )
-            return []
-
-        return cast(
-            list[ModelProviderInfo], json.loads(response.content).get("data", [])
-        )
-    except json.JSONDecodeError:
-        logger.exception("Openrouter return malformed JSON")
-    except requests.ConnectionError, requests.ConnectTimeout:
-        logger.exception("Failed to connect to Openrouter API")
+        ),
+        None,
+        _hint=GenericAPIResponse[list[ModelProviderInfo]],
+    ):
+        return data.get("data", [])
 
     return []
 
@@ -137,26 +139,16 @@ class ModelSingleStatistic(TypedDict):
 def get_statistics(
     model_slug: str, statistic_type: ModelStatisticType
 ) -> Iterator[ModelSingleStatistic]:
-    try:
-        response = requests.get(
+    if data := send_request(
+        requests.Request(
+            "GET",
             f"https://openrouter.ai/api/frontend/v1/stats/{statistic_type}",
-            params={
-                "permaslug": model_slug,
-                "timeRange": "3d",  # Only parameter that returns hourly stats
-            },
-        )
-
-        if not response.ok:
-            logger.error(
-                "Model to provider ID query returned non-200 status code",
-                url=response.request.url,
-                status_code=response.status_code,
-            )
-            return
-
-        for datum in json.loads(response.content).get("data", []):
-            time_block = cast(TimeBlock, datum)
-
+            params={"permaslug": model_slug, "timeRange": "3d"},
+        ),
+        None,
+        _hint=GenericAPIResponse[list[TimeBlock]],
+    ):
+        for time_block in data.get("data", []):
             for provider_id, value in time_block.get("y", {}).items():
                 if provider_name := provider_id_to_name(provider_id, model_slug):
                     yield ModelSingleStatistic(
@@ -166,11 +158,6 @@ def get_statistics(
                         timestamp=time_block.get("x", ""),
                         value=value,
                     )
-
-    except json.JSONDecodeError:
-        logger.exception("Openrouter return malformed JSON")
-    except requests.ConnectionError, requests.ConnectTimeout:
-        logger.exception("Failed to connect to Openrouter API")
 
 
 class ModelAllStatistics(TypedDict):
