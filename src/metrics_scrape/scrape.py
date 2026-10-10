@@ -19,6 +19,7 @@ from .models import (
     ModelProviderInfo,
     ModelSingleStatistic,
     ModelStatisticType,
+    ProviderStatistics,
     TimeBlock,
 )
 
@@ -148,13 +149,13 @@ def collect_statistics(models: Iterator[Model]) -> Iterator[ModelAllStatistics]:
                 all_statistics["providers"].setdefault(
                     grouped_statistics[0].get("provider"), []
                 ).append(
-                    {
-                        "timestamp": grouped_statistics[0].get("timestamp"),
+                    ProviderStatistics(
+                        timestamp=grouped_statistics[0].get("timestamp"),
                         **{
                             s.get("statistic_type").json_value: s.get("value")
                             for s in grouped_statistics
                         },
-                    }
+                    )
                 )
 
         yield all_statistics

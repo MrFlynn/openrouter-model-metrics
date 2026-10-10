@@ -1,5 +1,5 @@
 from enum import StrEnum, auto
-from typing import Required, TypedDict
+from typing import NotRequired, Required, TypedDict
 
 
 class Modality(StrEnum):
@@ -55,7 +55,7 @@ class TimeBlock(TypedDict):
     """
 
     x: Required[str]
-    y: Required[dict[str, int]]
+    y: Required[dict[str, int | float]]
 
 
 # Single statistic entry decoded from each time block.
@@ -64,10 +64,20 @@ class ModelSingleStatistic(TypedDict):
     provider: Required[str]
     statistic_type: Required[ModelStatisticType]
     timestamp: Required[str]
-    value: Required[int | None]
+    value: Required[int | float]
 
 
 # All statistics for a given model combined into a single dictionary.
 class ModelAllStatistics(TypedDict):
     model: Required[str]
-    providers: Required[dict[str, list[dict[str, str | int | None]]]]
+    providers: Required[dict[str, list[ProviderStatistics]]]
+
+
+class ProviderStatistics(TypedDict):
+    timestamp: Required[str]
+    throughput: NotRequired[int | float]
+    latency: NotRequired[int | float]
+    latency_e2e: NotRequired[int | float]
+    tool_call_error_rate: NotRequired[int | float]
+    structured_output_error_rate: NotRequired[int | float]
+    cache_hit_error_rate: NotRequired[int | float]
