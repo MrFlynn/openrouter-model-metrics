@@ -16,7 +16,7 @@ class ModelStatisticType(StrEnum):
     LATENCY_E2E = "latency-e2e-comparison"
     TOOL_CALL_ERROR_RATE = "tool-call-error-rate"
     STRUCTURED_OUTPUT_ERROR_RATE = "structured-output-error-rate"
-    CACHE_HIT_ERROR_RATE = "cache-hit-error-rate"
+    CACHE_HIT_RATE = "cache-hit-rate-comparison"
 
     @property
     def json_value(self) -> str:
@@ -80,4 +80,4 @@ class ProviderStatistics(TypedDict):
     latency_e2e: NotRequired[int | float]
     tool_call_error_rate: NotRequired[int | float]
     structured_output_error_rate: NotRequired[int | float]
-    cache_hit_error_rate: NotRequired[int | float]
+    cache_hit_rate: NotRequired[int | float]
