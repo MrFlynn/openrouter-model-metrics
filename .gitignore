@@ -3,3 +3,6 @@ storage/
 
 # SQLite
 *.db
+
+# Python
+__pycache__/

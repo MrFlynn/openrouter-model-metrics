@@ -6,32 +6,21 @@ import os
 import re
 import sys
 from collections.abc import Iterator
-from enum import StrEnum, auto
-from typing import Required, TypedDict, cast
+from typing import cast
 
 import requests
 from loguru import logger
 
-
-class GenericAPIResponse[T](TypedDict):
-    data: Required[T]
-    links: Required[Links]
-
-
-class Links(TypedDict):
-    next: str | None
-
-
-class Model(TypedDict):
-    canonical_slug: Required[str]
-
-
-class Modality(StrEnum):
-    TEXT = auto()
-    IMAGE = auto()
-    AUDIO = auto()
-    EMBEDDINGS = auto()
-    ALL = auto()
+from .models import (
+    GenericAPIResponse,
+    Modality,
+    Model,
+    ModelAllStatistics,
+    ModelProviderInfo,
+    ModelSingleStatistic,
+    ModelStatisticType,
+    TimeBlock,
+)
 
 
 def send_request[T](
@@ -76,11 +65,6 @@ def get_models(token: str, modality: Modality = Modality.ALL) -> Iterator[Model]
             next_url = data.get("links", {}).get("next")
 
 
-class ModelProviderInfo(TypedDict):
-    id: Required[str]
-    provider_slug: Required[str]
-
-
 @functools.cache
 def get_provider_ids(slug: str) -> list[ModelProviderInfo]:
     if data := send_request(
@@ -110,32 +94,6 @@ def provider_id_to_name(provider_id: str, model_slug: str) -> str | None:
     )
 
 
-class ModelStatisticType(StrEnum):
-    THROUGHPUT = "throughput-comparison"
-    LATENCY = "latency-comparison"
-    LATENCY_E2E = "latency-e2e-comparison"
-    TOOL_CALL_ERROR_RATE = "tool-call-error-rate"
-    STRUCTURED_OUTPUT_ERROR_RATE = "structured-output-error-rate"
-    CACHE_HIT_ERROR_RATE = "cache-hit-error-rate"
-
-    @property
-    def json_value(self) -> str:
-        return self.value.removesuffix("-comparison").replace("-", "_")
-
-
-class TimeBlock(TypedDict):
-    x: Required[str]
-    y: Required[dict[str, int]]
-
-
-class ModelSingleStatistic(TypedDict):
-    model: Required[str]
-    provider: Required[str]
-    statistic_type: Required[ModelStatisticType]
-    timestamp: Required[str]
-    value: Required[int | None]
-
-
 def get_statistics(
     model_slug: str, statistic_type: ModelStatisticType
 ) -> Iterator[ModelSingleStatistic]:
@@ -158,11 +116,6 @@ def get_statistics(
                         timestamp=time_block.get("x", ""),
                         value=value,
                     )
-
-
-class ModelAllStatistics(TypedDict):
-    model: Required[str]
-    providers: Required[dict[str, list[dict[str, str | int | None]]]]
 
 
 def collect_statistics(models: Iterator[Model]) -> Iterator[ModelAllStatistics]:
@@ -242,7 +195,3 @@ def main() -> None:
             )
         )
     )
-
-
-if __name__ == "__main__":
-    main()
