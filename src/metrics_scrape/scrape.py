@@ -6,6 +6,7 @@ import os
 import re
 import sys
 from collections.abc import Iterator
+from numbers import Number
 from typing import cast
 
 import requests
@@ -109,15 +110,28 @@ def get_statistics(
         _hint=GenericAPIResponse[list[TimeBlock]],
     ):
         for time_block in data.get("data", []):
-            for provider_id, value in time_block.get("y", {}).items():
-                if provider_name := provider_id_to_name(provider_id, model_slug):
-                    yield ModelSingleStatistic(
-                        model=model_slug,
-                        provider=provider_name,
-                        statistic_type=statistic_type,
-                        timestamp=time_block.get("x", ""),
-                        value=value,
-                    )
+            if isinstance(median := time_block.get("y", {}).get("p50"), Number):
+                # For models with a single provider, OpenRouter provides the P50, P75, P90,
+                # P95, and P99 numbers. For models with multiple providers,OpenRouter
+                # returns the median values (or P50). To ensure data consistency, this tool
+                # saves the P50 value only for single-provider models.
+                yield ModelSingleStatistic(
+                    model=model_slug,
+                    provider=next(iter(model_slug.split("/", 1)), ""),  # take suffix (owner) as provider.
+                    statistic_type=statistic_type,
+                    timestamp=time_block.get("x", ""),
+                    value=median,
+                )
+            else:
+                for provider_id, value in time_block.get("y", {}).items():
+                    if provider_name := provider_id_to_name(provider_id, model_slug):
+                        yield ModelSingleStatistic(
+                            model=model_slug,
+                            provider=provider_name,
+                            statistic_type=statistic_type,
+                            timestamp=time_block.get("x", ""),
+                            value=value,
+                        )
 
 
 def collect_statistics(models: Iterator[Model]) -> Iterator[ModelAllStatistics]:
