@@ -50,9 +50,7 @@ def get_models(token: str, modality: Modality = Modality.ALL) -> Iterator[Model]
     session = requests.Session()
 
     prefix = "https://openrouter.ai"
-    next_url: str | None = (
-        f"/api/v1/models?output_modalities={modality}"
-    )
+    next_url: str | None = f"/api/v1/models?output_modalities={modality}"
 
     while next_url:
         if data := send_request(
@@ -115,7 +113,9 @@ def get_statistics(
                 # saves the P50 value only for single-provider models.
                 yield ModelSingleStatistic(
                     model=model_slug,
-                    provider=next(iter(model_slug.split("/", 1)), ""),  # take suffix (owner) as provider.
+                    provider=next(
+                        iter(model_slug.split("/", 1)), ""
+                    ),  # take suffix (owner) as provider.
                     statistic_type=statistic_type,
                     timestamp=time_block.get("x", ""),
                     value=median,
