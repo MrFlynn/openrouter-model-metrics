@@ -5,8 +5,13 @@ from typing import NotRequired, Required, TypedDict
 class Modality(StrEnum):
     TEXT = auto()
     IMAGE = auto()
+    VIDEO = auto()
     AUDIO = auto()
+    SPEECH = auto()
+    TRANSCRIPTION = auto()
     EMBEDDINGS = auto()
+    RERANK = auto()
+    DECISIONS = auto()
     ALL = auto()
 
 
