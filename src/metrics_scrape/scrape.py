@@ -188,13 +188,6 @@ def collect_statistics(models: Iterator[Model]) -> Iterator[ModelAllStatistics]:
 
 def main() -> None:
     logger.remove()
-    _ = logger.add(
-        sys.stderr,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> "
-        + "| <level>{level: <8}</level> "
-        + "| <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level> "
-        + "| {extra}",
-    )
 
     parser = argparse.ArgumentParser()
     _ = parser.add_argument(
@@ -205,7 +198,23 @@ def main() -> None:
         default=Modality.ALL,
         help="Output modality to query statistics for",
     )
+    _ = parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="Tool log level",
+    )
     args = parser.parse_args()
+
+    _ = logger.add(
+        sink=sys.stderr,
+        level=args.log_level,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> "
+        + "| <level>{level: <8}</level> "
+        + "| <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level> "
+        + "| {extra}",
+    )
 
     openrouter_token = os.getenv("OPENROUTER_API_KEY")
     if not openrouter_token:
