@@ -28,9 +28,7 @@ from .models import (
 def send_request[T](
     request: requests.Request, session: requests.Session | None, *, _hint: type[T]
 ) -> T | None:
-    with logger.contextualize(
-        method=request.method, url=request.url, model=request.params.get("permaslug")
-    ):
+    with logger.contextualize(method=request.method, url=request.url):
         try:
             if not session:
                 session = requests.Session()
@@ -135,45 +133,57 @@ def get_statistics(
 
 
 def collect_statistics(models: Iterator[Model]) -> Iterator[ModelAllStatistics]:
+    def grouping(stat: ModelSingleStatistic) -> tuple[str, str]:
+        return (stat.get("provider"), stat.get("timestamp"))
+
     for model in itertools.filterfalse(
         lambda m: re.fullmatch(r"^~.*-latest$", m.get("canonical_slug")), models
     ):
-
-        def grouping(stat: ModelSingleStatistic) -> tuple[str, str]:
-            return (stat.get("provider"), stat.get("timestamp"))
-
-        statistics = list(
-            itertools.chain.from_iterable(
-                [
-                    get_statistics(
-                        model_slug=model.get("canonical_slug"), statistic_type=t
-                    )
-                    for t in list(ModelStatisticType)
-                ]
-            )
-        )
-
-        all_statistics = ModelAllStatistics(
-            model=model.get("canonical_slug"), providers={}
-        )
-
-        for _, group in itertools.groupby(
-            sorted(statistics, key=grouping), key=grouping
-        ):
-            if len(grouped_statistics := list(group)) > 0:
-                all_statistics["providers"].setdefault(
-                    grouped_statistics[0].get("provider"), []
-                ).append(
-                    ProviderStatistics(
-                        timestamp=grouped_statistics[0].get("timestamp"),
-                        **{
-                            s.get("statistic_type").json_value: s.get("value")
-                            for s in grouped_statistics
-                        },
-                    )
+        with logger.contextualize(model=model.get("canonical_slug")):
+            statistics = list(
+                itertools.chain.from_iterable(
+                    [
+                        get_statistics(
+                            model_slug=model.get("canonical_slug"), statistic_type=t
+                        )
+                        for t in list(ModelStatisticType)
+                    ]
                 )
+            )
 
-        yield all_statistics
+            all_statistics = ModelAllStatistics(
+                model=model.get("canonical_slug"), providers={}
+            )
+
+            for _, group in itertools.groupby(
+                sorted(statistics, key=grouping), key=grouping
+            ):
+                if len(grouped_statistics := list(group)) > 0:
+                    provider, timestamp = grouped_statistics[0].get(
+                        "provider"
+                    ), grouped_statistics[0].get("timestamp")
+
+                    all_statistics["providers"].setdefault(provider, []).append(
+                        ProviderStatistics(
+                            timestamp=timestamp,
+                            **{
+                                s.get("statistic_type").json_value: s.get("value")
+                                for s in grouped_statistics
+                            },
+                        )
+                    )
+
+                    logger.debug(
+                        f"Collected {len(grouped_statistics)} entries for provider {provider} at {timestamp}"
+                    )
+
+            provider_count = len(all_statistics.get("providers"))
+            logger.info(
+                f"Collected statistics for {provider_count} provider"
+                + ("s" if provider_count > 1 else "")
+            )
+
+            yield all_statistics
 
 
 def main() -> None:
