@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import functools
 import itertools
 import json
@@ -219,6 +220,7 @@ def main() -> None:
         default="INFO",
         help="Tool log level",
     )
+    _ = parser.add_argument("out", help="Output file path or '-' for stdout")
     args = parser.parse_args()
 
     _ = logger.add(
@@ -235,12 +237,24 @@ def main() -> None:
         logger.error("An Openrouter API key is required")
         sys.exit(1)
 
-    print(
-        json.dumps(
+    manager = (
+        contextlib.nullcontext(sys.stdout)
+        if args.out == "-"
+        else open(args.out, "w+")  # noqa: SIM115
+    )
+
+    with manager as fp:
+        if fp.seekable():
+            _ = fp.seek(0)
+
+        json.dump(
             list(
                 collect_statistics(
                     get_models(token=openrouter_token, modality=args.modality)
                 )
-            )
+            ),
+            fp,
         )
-    )
+
+        if fp.seekable():
+            _ = fp.truncate()
