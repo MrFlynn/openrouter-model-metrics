@@ -6,11 +6,13 @@ import os
 import re
 import sys
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from numbers import Number
 from typing import cast
 
 import requests
 from loguru import logger
+from requests_ratelimiter import LimiterSession
 
 from .models import (
     GenericAPIResponse,
@@ -24,9 +26,14 @@ from .models import (
     TimeBlock,
 )
 
+GLOBAL_SESSION = LimiterSession(per_second=5)
+
 
 def send_request[T](
-    request: requests.Request, session: requests.Session | None, *, _hint: type[T]
+    request: requests.Request,
+    session: requests.Session | None = GLOBAL_SESSION,
+    *,
+    _hint: type[T],
 ) -> T | None:
     with logger.contextualize(method=request.method, url=request.url):
         try:
@@ -132,58 +139,65 @@ def get_statistics(
                         )
 
 
-def collect_statistics(models: Iterator[Model]) -> Iterator[ModelAllStatistics]:
+def pool_statistics_for_model(model: Model) -> ModelAllStatistics:
     def grouping(stat: ModelSingleStatistic) -> tuple[str, str]:
         return (stat.get("provider"), stat.get("timestamp"))
 
-    for model in itertools.filterfalse(
-        lambda m: re.fullmatch(r"^~.*-latest$", m.get("canonical_slug")), models
-    ):
-        with logger.contextualize(model=model.get("canonical_slug")):
-            statistics = list(
-                itertools.chain.from_iterable(
-                    [
-                        get_statistics(
-                            model_slug=model.get("canonical_slug"), statistic_type=t
-                        )
-                        for t in list(ModelStatisticType)
-                    ]
+    with logger.contextualize(model=model.get("canonical_slug")):
+        statistics = list(
+            itertools.chain.from_iterable(
+                [
+                    get_statistics(
+                        model_slug=model.get("canonical_slug"), statistic_type=t
+                    )
+                    for t in list(ModelStatisticType)
+                ]
+            )
+        )
+
+        all_statistics = ModelAllStatistics(
+            model=model.get("canonical_slug"), providers={}
+        )
+
+        for _, group in itertools.groupby(
+            sorted(statistics, key=grouping), key=grouping
+        ):
+            if len(grouped_statistics := list(group)) > 0:
+                provider, timestamp = grouped_statistics[0].get(
+                    "provider"
+                ), grouped_statistics[0].get("timestamp")
+
+                all_statistics["providers"].setdefault(provider, []).append(
+                    ProviderStatistics(
+                        timestamp=timestamp,
+                        **{
+                            s.get("statistic_type").json_value: s.get("value")
+                            for s in grouped_statistics
+                        },
+                    )
                 )
-            )
 
-            all_statistics = ModelAllStatistics(
-                model=model.get("canonical_slug"), providers={}
-            )
+                logger.debug(
+                    f"Collected {len(grouped_statistics)} entries for provider {provider} at {timestamp}"
+                )
 
-            for _, group in itertools.groupby(
-                sorted(statistics, key=grouping), key=grouping
-            ):
-                if len(grouped_statistics := list(group)) > 0:
-                    provider, timestamp = grouped_statistics[0].get(
-                        "provider"
-                    ), grouped_statistics[0].get("timestamp")
+        provider_count = len(all_statistics.get("providers"))
+        logger.info(
+            f"Collected statistics for {provider_count} provider"
+            + ("s" if provider_count != 1 else "")
+        )
 
-                    all_statistics["providers"].setdefault(provider, []).append(
-                        ProviderStatistics(
-                            timestamp=timestamp,
-                            **{
-                                s.get("statistic_type").json_value: s.get("value")
-                                for s in grouped_statistics
-                            },
-                        )
-                    )
+        return all_statistics
 
-                    logger.debug(
-                        f"Collected {len(grouped_statistics)} entries for provider {provider} at {timestamp}"
-                    )
 
-            provider_count = len(all_statistics.get("providers"))
-            logger.info(
-                f"Collected statistics for {provider_count} provider"
-                + ("s" if provider_count > 1 else "")
-            )
-
-            yield all_statistics
+def collect_statistics(models: Iterator[Model]) -> Iterator[ModelAllStatistics]:
+    with ThreadPoolExecutor() as executor:
+        return executor.map(
+            pool_statistics_for_model,
+            itertools.filterfalse(
+                lambda m: re.fullmatch(r"^~.*-latest$", m.get("canonical_slug")), models
+            ),
+        )
 
 
 def main() -> None:
