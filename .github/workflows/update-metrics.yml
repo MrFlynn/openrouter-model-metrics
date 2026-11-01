@@ -23,7 +23,7 @@ jobs:
 
       - name: Scrape metrics
         timeout-minutes: 5
-        run: uv run --locked metrics-scrape -m all model-metrics.json
+        run: uv run metrics-scrape -m all model-metrics.json
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
