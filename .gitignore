@@ -3,3 +3,7 @@ storage/
 
 # SQLite
 *.db
+
+# Python
+__pycache__/
+**/*.egg-info/*

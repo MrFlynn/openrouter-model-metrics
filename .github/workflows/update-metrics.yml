@@ -2,6 +2,8 @@ name: Update Model Metrics
 
 on:
   push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -11,22 +13,19 @@ jobs:
       group: ${{ github.ref }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.ref }}
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
         with:
-          python-version: "3.14"
+          python-version: "3.15.1"
 
-      - name: Install chromium via Playwright
-        run: uv run playwright install chromium
-
-      - name: Run model metrics
-        timeout-minutes: 30
-        run: uv run model-metrics.py
+      - name: Scrape metrics
+        timeout-minutes: 5
+        run: uv run --locked metrics-scrape -m all model-metrics.json
         env:
-          SCRAPE_METRICS_TIMEOUT: 20m
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
       - name: Commit and push changes
         if: ${{ !cancelled() }}
